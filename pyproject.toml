@@ -1,0 +1,12 @@
+[project]
+name = "toutiao"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiomysql>=0.3.2",
+    "fastapi>=0.141.1",
+    "sqlalchemy[asyncio]>=2.0.52",
+    "uvicorn[standard]>=0.52.4",
+]
