@@ -3,7 +3,7 @@ from config.db_conf import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.users import User
 from utils.auth import get_current_user
-from crud.favorites import check, add_favorite, remove, get_favorite_list, clear_favorites
+from crud.favorites import check, add_favorite, remove, get_favorite_list, get_favorite_count, clear_favorites
 from schemas.favorites import FavoriteAdd
 
 router = APIRouter(prefix="/api/favorite",tags=["favorite"])
@@ -47,13 +47,18 @@ async def remove_favorite(news_id: int=Query(...,alias="newsId"), user: User=Dep
     }
 
 @router.get("/list")
-async def favorite_list(user: User=Depends(get_current_user), db: AsyncSession=Depends(get_db)):
-    fav_list = await get_favorite_list(db, user.id)
+async def favorite_list(page: int = 1, page_size: int = Query(10, alias="pageSize", le=100), user: User=Depends(get_current_user), db: AsyncSession=Depends(get_db)):
+    offset = (page - 1) * page_size
+    fav_list = await get_favorite_list(db, user.id, offset, page_size)
+    total = await get_favorite_count(db, user.id)
+    has_more = (offset + len(fav_list)) < total
     return {
     "code": 200,
     "message": "获取收藏列表成功",
     "data": {
-        "list": fav_list
+        "list": fav_list,
+        "total": total,
+        "hasMore": has_more
     }
     }
 
