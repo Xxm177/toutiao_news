@@ -35,9 +35,7 @@ async def get_news_detail(news_id: int = Query(..., alias="id"), db: AsyncSessio
     news_detail = await news.get_news_detail(db, news_id)
     if not news_detail:
         raise HTTPException(status_code=404, detail="新闻不存在")
-    news_views = await news.increase_news_views(db, news_id)
-    if not news_views:
-        raise HTTPException(status_code=404, detail="新闻不存在")
+    views_increment = await news.increase_news_views(news_id)
     related_news = await news.get_related_news(db, news_detail.id, news_detail.category_id)
 
     return {
@@ -51,7 +49,7 @@ async def get_news_detail(news_id: int = Query(..., alias="id"), db: AsyncSessio
         "author": news_detail.author,
         "publishTime": news_detail.publish_time,
         "categoryId": news_detail.category_id,
-        "views": news_detail.views,
+        "views": news_detail.views + views_increment,
         "relatedNews": related_news
       }
     }

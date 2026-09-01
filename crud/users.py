@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-from models.users import User, UserToken
+from models.users import User
 from schemas.users import UserRequest, UserUpdateRequest
 from utils import security
+from cache import token_cache
 async def get_user_by_username(db: AsyncSession, username: str):
     stmt = select(User).where(User.username == username)
     res = await db.execute(stmt)
@@ -21,18 +21,7 @@ async def create_user(db: AsyncSession, user_data: UserRequest):
 
 async def get_token(db: AsyncSession, user_id: int):
     token = str(uuid.uuid4())
-    expires_at = datetime.now() + timedelta(days=7)
-    stmt = select(UserToken).where(UserToken.user_id == user_id)
-    res = await db.execute(stmt)
-    user_token = res.scalar_one_or_none()
-    if user_token:
-        user_token.token = token
-        user_token.expires_at = expires_at
-        await db.commit()
-    else:
-        user_token = UserToken(user_id=user_id, token=token, expires_at=expires_at)
-        db.add(user_token)
-        await db.commit()
+    await token_cache.set_token(token, user_id)
     return token
 
 async def user_login(db: AsyncSession, user_data: UserRequest):
@@ -44,12 +33,10 @@ async def user_login(db: AsyncSession, user_data: UserRequest):
     return user
 
 async def get_user_by_token(db: AsyncSession, token: str):
-    user = select(UserToken).where(UserToken.token == token)
-    res = await db.execute(user)
-    db_token = res.scalar_one_or_none()
-    if not db_token or db_token.expires_at < datetime.now():
+    user_id = await token_cache.get_user_id_by_token(token)
+    if user_id is None:
         return None
-    query = select(User).where(User.id == db_token.user_id)
+    query = select(User).where(User.id == user_id)
     res = await db.execute(query)
     return res.scalar_one_or_none()
 

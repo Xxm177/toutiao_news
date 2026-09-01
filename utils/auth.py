@@ -8,5 +8,5 @@ async def get_current_user(authorization: str=Header(...,alias="Authorization"),
     token = authorization.replace("Bearer ","")
     user = await users.get_user_by_token(db, token)
     if not user:
-        return HTTPException(status_code=404,detail="未匹配用户")
+        raise HTTPException(status_code=401, detail="未登录或登录已过期")
     return user
